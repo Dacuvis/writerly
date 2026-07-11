@@ -1,0 +1,51 @@
+import { useEffect, useState } from "react";
+import Editor, { type Chapter } from "./components/Editor";
+import ChapterDialog from "./components/ChapterDialog";
+import ManuscriptDialog from "./components/ManuscriptDialog";
+import ConfirmDialog from "./components/ConfirmDialog";
+import { jsPDF } from "jspdf";
+import "./index.css";
+
+type ManuscriptSummary = { id: string; title: string; description: string; cover_color: string; updated_at: string };
+type Manuscript = ManuscriptSummary & { chapters: Chapter[] };
+type Dialog = "new-manuscript" | "rename-manuscript" | "delete-manuscript" | "new-chapter" | "rename-chapter" | "delete-chapter" | null;
+
+function App() {
+  const [manuscripts, setManuscripts] = useState<ManuscriptSummary[]>([]);
+  const [manuscript, setManuscript] = useState<Manuscript | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<Dialog>(null);
+  const [saveStatus, setSaveStatus] = useState<"loading" | "saved" | "saving" | "error">("loading");
+
+  async function loadManuscript(id: string) { const response = await fetch(`/api/manuscripts/${id}`); if (!response.ok) throw new Error("Could not load manuscript"); const data = await response.json() as Manuscript; setManuscript(data); setSelectedId(data.chapters[0]?.id ?? null); setSaveStatus("saved"); }
+  useEffect(() => { fetch("/api/manuscripts").then((response) => response.ok ? response.json() : Promise.reject()).then(async (items: ManuscriptSummary[]) => { setManuscripts(items); if (items[0]) await loadManuscript(items[0].id); else setSaveStatus("saved"); }).catch(() => setSaveStatus("error")); }, []);
+  const selectedChapter = manuscript?.chapters.find((chapter) => chapter.id === selectedId) ?? null;
+  const updateChapter = (chapter: Chapter) => setManuscript((current) => current && ({ ...current, chapters: current.chapters.map((item) => item.id === chapter.id ? chapter : item) }));
+
+  async function saveChapter(id: string, content_json: string, content_html: string) { setSaveStatus("saving"); try { const response = await fetch(`/api/chapters/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content_json, content_html }) }); if (!response.ok) throw new Error(); const saved = await response.json() as Chapter; updateChapter({ ...saved, word_count: content_html.replace(/<[^>]*>/g, " ").trim().split(/\s+/).filter(Boolean).length }); setSaveStatus("saved"); } catch { setSaveStatus("error"); } }
+
+  function handleShareAsPdf() {
+    if (!selectedChapter) return;
+
+    const doc = new jsPDF();
+
+    doc.html(selectedChapter.content_html, {
+      callback: function (doc) {
+        doc.save(`${selectedChapter.title}.pdf`);
+      },
+      x: 10,
+      y: 10,
+      html2canvas: { scale: 0.25 },
+    });
+  }
+
+  async function createManuscript(data: { title: string; description: string }) { const response = await fetch("/api/manuscripts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }); if (!response.ok) throw new Error("Could not create manuscript"); const created = await response.json() as ManuscriptSummary; setManuscripts((items) => [created, ...items]); await loadManuscript(created.id); }
+  async function renameManuscript(data: { title: string; description: string }) { if (!manuscript) return; const response = await fetch(`/api/manuscripts/${manuscript.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }); if (!response.ok) throw new Error("Could not rename manuscript"); const saved = await response.json() as ManuscriptSummary; setManuscripts((items) => items.map((item) => item.id === saved.id ? saved : item)); setManuscript((item) => item && { ...item, ...saved }); }
+  async function deleteManuscript() { if (!manuscript) return; const id = manuscript.id; const remaining = manuscripts.filter((item) => item.id !== id); const response = await fetch(`/api/manuscripts/${id}`, { method: "DELETE" }); if (!response.ok) throw new Error("Could not delete manuscript"); setManuscripts(remaining); setManuscript(null); setSelectedId(null); if (remaining[0]) await loadManuscript(remaining[0].id); }
+  async function createChapter(title: string) { if (!manuscript) return; const response = await fetch(`/api/manuscripts/${manuscript.id}/chapters`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title }) }); if (!response.ok) throw new Error("Could not create chapter"); const created = await response.json() as Chapter; setManuscript((current) => current && ({ ...current, chapters: [...current.chapters, created] })); setSelectedId(created.id); }
+  async function renameChapter(title: string) { if (!selectedChapter) return; const response = await fetch(`/api/chapters/${selectedChapter.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title }) }); if (!response.ok) throw new Error("Could not rename chapter"); updateChapter({ ...selectedChapter, title }); }
+  async function deleteChapter() { if (!manuscript || !selectedChapter) return; const response = await fetch(`/api/chapters/${selectedChapter.id}`, { method: "DELETE" }); if (!response.ok) throw new Error("Could not delete chapter"); const chapters = manuscript.chapters.filter((item) => item.id !== selectedChapter.id); setManuscript({ ...manuscript, chapters }); setSelectedId(chapters[0]?.id ?? null); }
+
+  return <main className="app-shell"><aside className="sidebar"><div className="brand"><span className="brand-mark">W</span><span>writerly</span></div><button className="new-button" onClick={() => setDialog("new-manuscript")}><span>+</span> New manuscript</button><div className="side-label">MANUSCRIPTS</div><nav className="manuscript-list">{manuscripts.map((item) => <button className={`manuscript-select ${item.id === manuscript?.id ? "active" : ""}`} key={item.id} onClick={() => void loadManuscript(item.id)}><span>▱</span><strong>{item.title}</strong>{item.id === manuscript?.id && <small className="item-actions"><button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); setDialog("rename-manuscript"); }}>Edit</button><button type="button" className="danger-action" onClick={(event) => { event.preventDefault(); event.stopPropagation(); setDialog("delete-manuscript"); }}>Delete</button></small>}</button>)}</nav>{manuscript && <><div className="side-label chapter-label">CHAPTERS</div><nav className="chapter-list">{manuscript.chapters.map((chapter) => <button className={`chapter ${chapter.id === selectedId ? "active" : ""}`} key={chapter.id} onClick={() => setSelectedId(chapter.id)}><span className="chapter-number">{String(chapter.position).padStart(2, "0")}</span><span className="chapter-copy"><strong>{chapter.title}</strong><small>{chapter.word_count ? `${chapter.word_count.toLocaleString()} words` : "—"}</small></span>{chapter.id === selectedId && <span className="chapter-actions"><button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); setDialog("rename-chapter"); }}>Edit</button><button type="button" className="danger-action" onClick={(event) => { event.preventDefault(); event.stopPropagation(); setDialog("delete-chapter"); }}>Delete</button></span>}</button>)}</nav><button className="add-scene" onClick={() => setDialog("new-chapter")}>+ Add chapter</button></>}<div className="sidebar-bottom"><button className="nav-link"><span>☼</span> Appearance</button></div></aside><section className="workspace"><header className="topbar"><div className="crumbs"><span>{manuscript?.title ?? "No manuscript"}</span><i>/</i><strong>{selectedChapter?.title ?? ""}</strong></div><div className="top-actions"><span className={`saved ${saveStatus}`}><b></b>{saveStatus === "saving" ? "Saving…" : saveStatus === "error" ? "Could not save" : saveStatus === "loading" ? "Loading…" : "Saved"}</span><button className="share-button" onClick={handleShareAsPdf}>Share <span>↗</span></button></div></header>{selectedChapter ? <Editor chapter={selectedChapter} onSave={saveChapter} /> : <div className="empty-state"><span>✦</span><h1>{manuscript ? "Your manuscript is ready" : "Create your first manuscript"}</h1><p>{manuscript ? "Add a chapter to begin writing." : "Keep every story and draft in one calm place."}</p><button className="new-button" onClick={() => setDialog(manuscript ? "new-chapter" : "new-manuscript")}>+ {manuscript ? "Add chapter" : "New manuscript"}</button></div>}</section>{dialog === "new-manuscript" && <ManuscriptDialog mode="create" onClose={() => setDialog(null)} onSubmit={createManuscript} />}{dialog === "rename-manuscript" && manuscript && <ManuscriptDialog mode="rename" initialTitle={manuscript.title} initialDescription={manuscript.description} onClose={() => setDialog(null)} onSubmit={renameManuscript} />}{dialog === "delete-manuscript" && manuscript && <ConfirmDialog title="Delete manuscript?" description={`“${manuscript.title}” and every chapter inside it will be permanently deleted.`} confirmLabel="Delete manuscript" onClose={() => setDialog(null)} onConfirm={deleteManuscript} />}{dialog === "new-chapter" && <ChapterDialog mode="create" onClose={() => setDialog(null)} onSubmit={createChapter} />}{dialog === "rename-chapter" && selectedChapter && <ChapterDialog mode="rename" initialTitle={selectedChapter.title} onClose={() => setDialog(null)} onSubmit={renameChapter} />}{dialog === "delete-chapter" && selectedChapter && <ConfirmDialog title="Delete chapter?" description={`“${selectedChapter.title}” will be permanently deleted.`} confirmLabel="Delete chapter" onClose={() => setDialog(null)} onConfirm={deleteChapter} />}</main>;
+}
+export default App;
