@@ -24,7 +24,7 @@ const app = new Elysia()
   .get("/api/manuscripts/:id", ({ params, set }) => {
     const manuscript = db.query("SELECT * FROM manuscripts WHERE id = ?").get(params.id);
     if (!manuscript) { set.status = 404; return { error: "Manuscript not found" }; }
-    const chapters = db.query("SELECT id, title, position, status, word_goal, font_size, content_json, content_html, updated_at FROM chapters WHERE manuscript_id = ? ORDER BY position").all(params.id) as Array<Record<string, unknown>>;
+    const chapters = db.query("SELECT id, title, position, status, word_goal, font_size, font_family, content_json, content_html, updated_at FROM chapters WHERE manuscript_id = ? ORDER BY position").all(params.id) as Array<Record<string, unknown>>;
     return { ...(manuscript as object), chapters: chapters.map((chapter) => ({ ...chapter, word_count: wordCount(chapter.content_html as string) })) };
   })
   .patch("/api/manuscripts/:id", ({ params, body, set }) => {
@@ -61,9 +61,9 @@ const app = new Elysia()
   }, { body: t.Object({ title: t.String({ minLength: 1, maxLength: 150 }) }) })
   .patch("/api/chapters/:id", ({ params, body, set }) => {
     if (!db.query("SELECT id FROM chapters WHERE id = ?").get(params.id)) { set.status = 404; return { error: "Chapter not found" }; }
-    db.query("UPDATE chapters SET title = COALESCE(?, title), content_json = COALESCE(?, content_json), content_html = COALESCE(?, content_html), status = COALESCE(?, status), word_goal = COALESCE(?, word_goal), font_size = COALESCE(?, font_size), updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(body.title ?? null, body.content_json ?? null, body.content_html ?? null, body.status ?? null, body.word_goal ?? null, body.font_size ?? null, params.id);
+    db.query("UPDATE chapters SET title = COALESCE(?, title), content_json = COALESCE(?, content_json), content_html = COALESCE(?, content_html), status = COALESCE(?, status), word_goal = COALESCE(?, word_goal), font_size = COALESCE(?, font_size), font_family = COALESCE(?, font_family), updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(body.title ?? null, body.content_json ?? null, body.content_html ?? null, body.status ?? null, body.word_goal ?? null, body.font_size ?? null, body.font_family ?? null, params.id);
     return db.query("SELECT * FROM chapters WHERE id = ?").get(params.id);
-  }, { body: t.Object({ title: t.Optional(t.String({ minLength: 1 })), content_json: t.Optional(t.String()), content_html: t.Optional(t.String()), status: t.Optional(t.Union([t.Literal("idea"), t.Literal("draft"), t.Literal("revised"), t.Literal("complete")])), word_goal: t.Optional(t.Number({ minimum: 0 })), font_size: t.Optional(t.Number({ minimum: 12, maximum: 28 })) }) })
+  }, { body: t.Object({ title: t.Optional(t.String({ minLength: 1 })), content_json: t.Optional(t.String()), content_html: t.Optional(t.String()), status: t.Optional(t.Union([t.Literal("idea"), t.Literal("draft"), t.Literal("revised"), t.Literal("complete")])), word_goal: t.Optional(t.Number({ minimum: 0 })), font_size: t.Optional(t.Number({ minimum: 12, maximum: 28 })), font_family: t.Optional(t.Union([t.Literal("Playfair Display"), t.Literal("Lora"), t.Literal("Merriweather"), t.Literal("Libre Baskerville"), t.Literal("Source Serif 4")])) }) })
   .delete("/api/chapters/:id", ({ params, set }) => {
     const result = db.query("DELETE FROM chapters WHERE id = ?").run(params.id);
     if (!result.changes) { set.status = 404; return { error: "Chapter not found" }; }
@@ -74,7 +74,17 @@ const app = new Elysia()
     const id = crypto.randomUUID();
     db.query("INSERT INTO chapter_notes (id, chapter_id, body, position) VALUES (?, ?, ?, COALESCE((SELECT MAX(position) + 1 FROM chapter_notes WHERE chapter_id = ?), 0))").run(id, params.id, body.body, params.id);
     return db.query("SELECT * FROM chapter_notes WHERE id = ?").get(id);
-  }, { body: t.Object({ body: t.String({ minLength: 1 }) }) })
+  }, { body: t.Object({ body: t.String({ minLength: 1, maxLength: 5000 }) }) })
+  .patch("/api/notes/:id", ({ params, body, set }) => {
+    const result = db.query("UPDATE chapter_notes SET body = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(body.body, params.id);
+    if (!result.changes) { set.status = 404; return { error: "Note not found" }; }
+    return db.query("SELECT * FROM chapter_notes WHERE id = ?").get(params.id);
+  }, { body: t.Object({ body: t.String({ minLength: 1, maxLength: 5000 }) }) })
+  .delete("/api/notes/:id", ({ params, set }) => {
+    const result = db.query("DELETE FROM chapter_notes WHERE id = ?").run(params.id);
+    if (!result.changes) { set.status = 404; return { error: "Note not found" }; }
+    return { ok: true };
+  })
   .listen(3001);
 
 console.log(`Writerly API running at ${app.server?.url}`);

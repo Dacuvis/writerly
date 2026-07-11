@@ -3,7 +3,7 @@ import Editor, { type Chapter } from "./components/Editor";
 import ChapterDialog from "./components/ChapterDialog";
 import ManuscriptDialog from "./components/ManuscriptDialog";
 import ConfirmDialog from "./components/ConfirmDialog";
-import { jsPDF } from "jspdf";
+import { exportChapterPdf } from "./lib/exportChapterPdf";
 import "./index.css";
 
 type ManuscriptSummary = { id: string; title: string; description: string; cover_color: string; updated_at: string };
@@ -22,22 +22,9 @@ function App() {
   const selectedChapter = manuscript?.chapters.find((chapter) => chapter.id === selectedId) ?? null;
   const updateChapter = (chapter: Chapter) => setManuscript((current) => current && ({ ...current, chapters: current.chapters.map((item) => item.id === chapter.id ? chapter : item) }));
 
-  async function saveChapter(id: string, content_json: string, content_html: string) { setSaveStatus("saving"); try { const response = await fetch(`/api/chapters/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content_json, content_html }) }); if (!response.ok) throw new Error(); const saved = await response.json() as Chapter; updateChapter({ ...saved, word_count: content_html.replace(/<[^>]*>/g, " ").trim().split(/\s+/).filter(Boolean).length }); setSaveStatus("saved"); } catch { setSaveStatus("error"); } }
+  async function saveChapter(id: string, content_json: string, content_html: string, font_size: number, font_family: string) { setSaveStatus("saving"); try { const response = await fetch(`/api/chapters/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content_json, content_html, font_size, font_family }) }); if (!response.ok) throw new Error(); const saved = await response.json() as Chapter; updateChapter({ ...saved, word_count: content_html.replace(/<[^>]*>/g, " ").trim().split(/\s+/).filter(Boolean).length }); setSaveStatus("saved"); } catch { setSaveStatus("error"); } }
 
-  function handleShareAsPdf() {
-    if (!selectedChapter) return;
-
-    const doc = new jsPDF();
-
-    doc.html(selectedChapter.content_html, {
-      callback: function (doc) {
-        doc.save(`${selectedChapter.title}.pdf`);
-      },
-      x: 10,
-      y: 10,
-      html2canvas: { scale: 0.25 },
-    });
-  }
+  function handleShareAsPdf() { if (selectedChapter) void exportChapterPdf(selectedChapter, manuscript?.title ?? ""); }
 
   async function createManuscript(data: { title: string; description: string }) { const response = await fetch("/api/manuscripts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }); if (!response.ok) throw new Error("Could not create manuscript"); const created = await response.json() as ManuscriptSummary; setManuscripts((items) => [created, ...items]); await loadManuscript(created.id); }
   async function renameManuscript(data: { title: string; description: string }) { if (!manuscript) return; const response = await fetch(`/api/manuscripts/${manuscript.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }); if (!response.ok) throw new Error("Could not rename manuscript"); const saved = await response.json() as ManuscriptSummary; setManuscripts((items) => items.map((item) => item.id === saved.id ? saved : item)); setManuscript((item) => item && { ...item, ...saved }); }

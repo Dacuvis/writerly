@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400..700;1,400..700&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Source+Serif+4:ital,wght@0,400..700;1,400..700&display=swap');
 @import "tailwindcss";
 
 * { box-sizing: border-box; }
@@ -45,3 +45,8 @@ button, select { font: inherit; } button { cursor: pointer; }
 .goal small { display:block; }.progress { height:5px; margin:11px 0 8px; }
 .notes strong { font-size:13px; font-weight:650; }.notes p { font-size:11px; line-height:1.65; }
 .toolbar select,.saved,.share-button,.nav-link,.add-scene,.new-button,.dialog-field input,.dialog-field textarea { font-family:"Instrument Sans",Arial,sans-serif; }
+.toolbar .font-family-select { width:142px; }
+.toolbar .font-size-select { width:58px; }
+.prose-editor { font-family:var(--editor-font-family, "Playfair Display", Georgia, serif); font-size:var(--editor-font-size, 17px); }
+.prose-editor h1 { font-family:var(--editor-font-family, "Playfair Display", Georgia, serif); }
+.notes-heading { display:flex; align-items:center; gap:6px; }.notes-heading small { margin-left:auto; color:#8f938c; font:10px "Instrument Sans",sans-serif; }.note-list { display:grid; gap:8px; margin:10px 0; }.note-card { position:relative; }.note-card textarea,.note-form textarea { box-sizing:border-box; display:block; width:100%; resize:vertical; border:1px solid #d9ddd3; border-radius:6px; background:#fff; color:#454b43; padding:8px 28px 8px 9px; font:11px/1.55 "Instrument Sans",Arial,sans-serif; outline:none; }.note-card textarea:focus,.note-form textarea:focus { border-color:#afbf5b; box-shadow:0 0 0 3px rgba(201,215,94,.18); }.note-card button { position:absolute; top:4px; right:4px; width:21px; height:21px; border:0; border-radius:4px; background:transparent; color:#9b685e; font-size:17px; line-height:1; }.note-card button:hover { background:#f5e8e4; }.note-form { display:grid; gap:7px; margin-top:11px; }.note-form button { justify-self:start; height:29px; border:0; border-radius:5px; background:#c9d75e; color:#293022; padding:0 10px; font:600 11px "Instrument Sans",sans-serif; }.note-form button:disabled { opacity:.55; cursor:wait; }

@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS chapters (
   status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('idea', 'draft', 'revised', 'complete')),
   word_goal INTEGER NOT NULL DEFAULT 2000 CHECK (word_goal >= 0),
   font_size INTEGER NOT NULL DEFAULT 17 CHECK (font_size BETWEEN 12 AND 28),
+  font_family TEXT NOT NULL DEFAULT 'Playfair Display' CHECK (font_family IN ('Playfair Display', 'Lora', 'Merriweather', 'Libre Baskerville', 'Source Serif 4')),
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(manuscript_id, position)

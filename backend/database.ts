@@ -13,6 +13,9 @@ const chapterColumns = db.query("PRAGMA table_info(chapters)").all() as Array<{ 
 if (!chapterColumns.some((column) => column.name === "font_size")) {
   db.exec("ALTER TABLE chapters ADD COLUMN font_size INTEGER NOT NULL DEFAULT 17 CHECK (font_size BETWEEN 12 AND 28)");
 }
+if (!chapterColumns.some((column) => column.name === "font_family")) {
+  db.exec("ALTER TABLE chapters ADD COLUMN font_family TEXT NOT NULL DEFAULT 'Playfair Display'");
+}
 
 const chapterContent = JSON.stringify({ type: "doc", content: [{ type: "paragraph", attrs: { class: "eyebrow" }, content: [{ type: "text", text: "CHAPTER ONE" }] }, { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "The Last Summer" }] }, { type: "paragraph", content: [{ type: "text", text: "There are summers that stretch out before you like an open road, all heat-haze and possibility. And then there are the ones you spend years trying to find your way back to." }] }] });
 const chapterHtml = "<p class=\"eyebrow\">CHAPTER ONE</p><h1>The Last Summer</h1><p>There are summers that stretch out before you like an open road, all heat-haze and possibility. And then there are the ones you spend years trying to find your way back to.</p>";
