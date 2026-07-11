@@ -2,8 +2,9 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { DEFAULT_EDITOR_FONT, FONT_OPTIONS, fontCss } from "../lib/fonts";
+import { Mark } from "@tiptap/core";
+import { useEffect, useRef, useState } from "react";
+import { DEFAULT_EDITOR_FONT, FONT_OPTIONS } from "../lib/fonts";
 
 export type Chapter = { id: string; title: string; position: number; status: string; word_goal: number; font_size: number; font_family: string; content_json: string; content_html: string; word_count: number };
 type Props = { chapter: Chapter; onSave: (id: string, json: string, html: string, fontSize: number, fontFamily: string) => Promise<void> };
@@ -11,6 +12,20 @@ type Props = { chapter: Chapter; onSave: (id: string, json: string, html: string
 function countWords(text: string) { return text.trim().split(/\s+/).filter(Boolean).length; }
 function ToolButton({ label, active, onClick, children }: { label: string; active?: boolean; onClick: () => void; children: React.ReactNode }) { return <button aria-label={label} title={label} onClick={onClick} className={active ? "tool active" : "tool"}>{children}</button>; }
 type Note = { id: string; body: string };
+
+const FontFamily = Mark.create({
+  name: "fontFamily", keepOnSplit: false,
+  addAttributes() { return { fontFamily: { default: null, parseHTML: (element: HTMLElement) => element.style.fontFamily || null, renderHTML: (attributes: { fontFamily?: string }) => attributes.fontFamily ? { style: `font-family: ${attributes.fontFamily}` } : {} } }; },
+  parseHTML() { return [{ tag: "span[style*='font-family']" }]; },
+  renderHTML({ HTMLAttributes }) { return ["span", HTMLAttributes, 0]; },
+});
+
+const FontSize = Mark.create({
+  name: "fontSize", keepOnSplit: false,
+  addAttributes() { return { fontSize: { default: null, parseHTML: (element: HTMLElement) => element.style.fontSize || null, renderHTML: (attributes: { fontSize?: string }) => attributes.fontSize ? { style: `font-size: ${attributes.fontSize}` } : {} } }; },
+  parseHTML() { return [{ tag: "span[style*='font-size']" }]; },
+  renderHTML({ HTMLAttributes }) { return ["span", HTMLAttributes, 0]; },
+});
 
 function ChapterNotes({ chapterId }: { chapterId: string }) {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -51,20 +66,18 @@ export default function Editor({ chapter, onSave }: Props) {
   const saveRef = useRef(onSave);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [words, setWords] = useState(chapter.word_count);
-  const [fontSize, setFontSize] = useState(chapter.font_size || 17);
-  const [fontFamily, setFontFamily] = useState(chapter.font_family || DEFAULT_EDITOR_FONT);
-  const fontSizeRef = useRef(fontSize);
-  const fontFamilyRef = useRef(fontFamily);
-  chapterRef.current = chapter; saveRef.current = onSave; fontSizeRef.current = fontSize; fontFamilyRef.current = fontFamily;
+  const [, setSelectionVersion] = useState(0);
+  chapterRef.current = chapter; saveRef.current = onSave;
   const editor = useEditor({
-    extensions: [StarterKit, Underline, Placeholder.configure({ placeholder: "Begin writing…" })],
+    extensions: [StarterKit, Underline, FontFamily, FontSize, Placeholder.configure({ placeholder: "Begin writing…" })],
     content: chapter.content_html,
     editorProps: { attributes: { class: "prose-editor", spellcheck: "false" } },
     onUpdate: ({ editor: instance }) => {
       setWords(countWords(instance.getText()));
       if (saveTimer.current) clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(() => void saveRef.current(chapterRef.current.id, JSON.stringify(instance.getJSON()), instance.getHTML(), fontSizeRef.current, fontFamilyRef.current), 700);
+      saveTimer.current = setTimeout(() => void saveRef.current(chapterRef.current.id, JSON.stringify(instance.getJSON()), instance.getHTML(), chapterRef.current.font_size || 17, chapterRef.current.font_family || DEFAULT_EDITOR_FONT), 700);
     },
+    onSelectionUpdate: () => setSelectionVersion((version) => version + 1),
   });
 
   useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current); }, []);
@@ -73,15 +86,14 @@ export default function Editor({ chapter, onSave }: Props) {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     editor.commands.setContent(chapter.content_html, { emitUpdate: false });
     setWords(countWords(editor.getText()));
-    setFontSize(chapter.font_size || 17);
-    setFontFamily(chapter.font_family || DEFAULT_EDITOR_FONT);
   }, [chapter.id, editor]);
 
   if (!editor) return null;
   const goal = chapter.word_goal || 2000;
   const headingLevel = [1, 2, 3, 4, 5, 6].find((level) => editor.isActive("heading", { level })) ?? 0;
-  function saveSettings(size: number, family: string) { void saveRef.current(chapter.id, JSON.stringify(editor.getJSON()), editor.getHTML(), size, family); }
-  function setTextSize(size: number) { setFontSize(size); saveSettings(size, fontFamily); }
-  function setTextFont(family: string) { setFontFamily(family); saveSettings(fontSize, family); }
-  return <div className="editor-layout"><div className="writing-area"><div className="toolbar"><select value={headingLevel ? `Heading ${headingLevel}` : "Body"} onChange={(e) => { const level = Number(e.target.value.replace("Heading ", "")); level ? editor.chain().focus().setHeading({ level: level as 1 | 2 | 3 | 4 | 5 | 6 }).run() : editor.chain().focus().setParagraph().run(); }}><option>Body</option>{[1, 2, 3, 4, 5, 6].map((level) => <option key={level}>Heading {level}</option>)}</select><select className="font-family-select" aria-label="Font" value={fontFamily} onChange={(event) => setTextFont(event.target.value)}>{FONT_OPTIONS.map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}</select><select className="font-size-select" aria-label="Font size" value={fontSize} onChange={(event) => setTextSize(Number(event.target.value))}>{[14, 16, 17, 18, 20, 22].map((size) => <option key={size} value={size}>{size}px</option>)}</select><span className="toolbar-line" /><ToolButton label="Bold" active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}><b>B</b></ToolButton><ToolButton label="Italic" active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}><i>I</i></ToolButton><ToolButton label="Underline" active={editor.isActive("underline")} onClick={() => editor.chain().focus().toggleUnderline().run()}><u>U</u></ToolButton><span className="toolbar-line" /><ToolButton label="Bullet list" active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()}>≡</ToolButton><ToolButton label="Quote" active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()}>❝</ToolButton><span className="shortcut">⌘ /</span></div><article className="page" style={{ "--editor-font-size": `${fontSize}px`, "--editor-font-family": fontCss(fontFamily) } as CSSProperties}><EditorContent editor={editor} /></article><footer className="editor-footer"><span>{words.toLocaleString()} words</span><span>•</span><span>{Math.max(1, Math.ceil(words / 220))} min read</span><span className="footer-hint">Autosaves after you pause typing</span></footer></div><aside className="insights"><div className="insights-title"><span>CHAPTER DETAILS</span><button>⌃</button></div><label>STATUS</label><button className="status"><span></span> {chapter.status} <b>⌄</b></button><label>CHAPTER GOAL</label><div className="goal"><div><strong>{words.toLocaleString()}</strong><span>/ {goal.toLocaleString()} words</span></div><div className="progress"><i style={{ width: `${Math.min((words / goal) * 100, 100)}%` }} /></div><small>{Math.max(0, goal - words).toLocaleString()} words to go</small></div><ChapterNotes chapterId={chapter.id} /></aside></div>;
+  const fontFamily = editor.getAttributes("fontFamily").fontFamily || DEFAULT_EDITOR_FONT;
+  const fontSize = Number.parseInt(editor.getAttributes("fontSize").fontSize, 10) || 17;
+  function setTextSize(size: number) { editor.chain().focus().setMark("fontSize", { fontSize: `${size}px` }).run(); }
+  function setTextFont(family: string) { editor.chain().focus().setMark("fontFamily", { fontFamily: family }).run(); }
+  return <div className="editor-layout"><div className="writing-area"><div className="toolbar"><select value={headingLevel ? `Heading ${headingLevel}` : "Body"} onChange={(e) => { const level = Number(e.target.value.replace("Heading ", "")); level ? editor.chain().focus().setHeading({ level: level as 1 | 2 | 3 | 4 | 5 | 6 }).run() : editor.chain().focus().setParagraph().run(); }}><option>Body</option>{[1, 2, 3, 4, 5, 6].map((level) => <option key={level}>Heading {level}</option>)}</select><select className="font-family-select" aria-label="Font for selected text" value={fontFamily} onChange={(event) => setTextFont(event.target.value)}>{FONT_OPTIONS.map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}</select><select className="font-size-select" aria-label="Font size for selected text" value={fontSize} onChange={(event) => setTextSize(Number(event.target.value))}>{[14, 16, 17, 18, 20, 22].map((size) => <option key={size} value={size}>{size}px</option>)}</select><span className="toolbar-line" /><ToolButton label="Bold" active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}><b>B</b></ToolButton><ToolButton label="Italic" active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}><i>I</i></ToolButton><ToolButton label="Underline" active={editor.isActive("underline")} onClick={() => editor.chain().focus().toggleUnderline().run()}><u>U</u></ToolButton><span className="toolbar-line" /><ToolButton label="Bullet list" active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()}>≡</ToolButton><ToolButton label="Quote" active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()}>❝</ToolButton><span className="shortcut">⌘ /</span></div><article className="page"><EditorContent editor={editor} /></article><footer className="editor-footer"><span>{words.toLocaleString()} words</span><span>•</span><span>{Math.max(1, Math.ceil(words / 220))} min read</span><span className="footer-hint">Autosaves after you pause typing</span></footer></div><aside className="insights"><div className="insights-title"><span>CHAPTER DETAILS</span><button>⌃</button></div><label>STATUS</label><button className="status"><span></span> {chapter.status} <b>⌄</b></button><label>CHAPTER GOAL</label><div className="goal"><div><strong>{words.toLocaleString()}</strong><span>/ {goal.toLocaleString()} words</span></div><div className="progress"><i style={{ width: `${Math.min((words / goal) * 100, 100)}%` }} /></div><small>{Math.max(0, goal - words).toLocaleString()} words to go</small></div><ChapterNotes chapterId={chapter.id} /></aside></div>;
 }

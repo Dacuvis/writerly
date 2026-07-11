@@ -47,6 +47,14 @@ button, select { font: inherit; } button { cursor: pointer; }
 .toolbar select,.saved,.share-button,.nav-link,.add-scene,.new-button,.dialog-field input,.dialog-field textarea { font-family:"Instrument Sans",Arial,sans-serif; }
 .toolbar .font-family-select { width:142px; }
 .toolbar .font-size-select { width:58px; }
-.prose-editor { font-family:var(--editor-font-family, "Playfair Display", Georgia, serif); font-size:var(--editor-font-size, 17px); }
-.prose-editor h1 { font-family:var(--editor-font-family, "Playfair Display", Georgia, serif); }
+.prose-editor { font-family:"Playfair Display",Georgia,serif; font-size:17px; }
+/* The chapter typography controls apply to body copy only. Headings keep a
+   deliberate display face and scale, independent of the body font/size. */
+.prose-editor h1,.prose-editor h2,.prose-editor h3,.prose-editor h4,.prose-editor h5,.prose-editor h6 { font-family:"Playfair Display",Georgia,serif; color:#262522; letter-spacing:-.02em; }
+.prose-editor h1 { font-size:39px; line-height:1.12; font-weight:600; margin:0 0 38px; letter-spacing:-.035em; }
+.prose-editor h2 { font-size:31px; line-height:1.18; font-weight:600; margin:42px 0 18px; }
+.prose-editor h3 { font-size:26px; line-height:1.24; font-weight:600; margin:34px 0 16px; }
+.prose-editor h4 { font-size:22px; line-height:1.3; font-weight:600; margin:28px 0 14px; }
+.prose-editor h5 { font-size:19px; line-height:1.35; font-weight:600; margin:24px 0 12px; }
+.prose-editor h6 { font-size:17px; line-height:1.4; font-weight:600; margin:20px 0 10px; }
 .notes-heading { display:flex; align-items:center; gap:6px; }.notes-heading small { margin-left:auto; color:#8f938c; font:10px "Instrument Sans",sans-serif; }.note-list { display:grid; gap:8px; margin:10px 0; }.note-card { position:relative; }.note-card textarea,.note-form textarea { box-sizing:border-box; display:block; width:100%; resize:vertical; border:1px solid #d9ddd3; border-radius:6px; background:#fff; color:#454b43; padding:8px 28px 8px 9px; font:11px/1.55 "Instrument Sans",Arial,sans-serif; outline:none; }.note-card textarea:focus,.note-form textarea:focus { border-color:#afbf5b; box-shadow:0 0 0 3px rgba(201,215,94,.18); }.note-card button { position:absolute; top:4px; right:4px; width:21px; height:21px; border:0; border-radius:4px; background:transparent; color:#9b685e; font-size:17px; line-height:1; }.note-card button:hover { background:#f5e8e4; }.note-form { display:grid; gap:7px; margin-top:11px; }.note-form button { justify-self:start; height:29px; border:0; border-radius:5px; background:#c9d75e; color:#293022; padding:0 10px; font:600 11px "Instrument Sans",sans-serif; }.note-form button:disabled { opacity:.55; cursor:wait; }
