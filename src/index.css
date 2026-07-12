@@ -48,6 +48,15 @@ button, select { font: inherit; } button { cursor: pointer; }
 .toolbar .font-family-select { width:142px; }
 .toolbar .font-size-select { width:58px; }
 .prose-editor { font-family:"Playfair Display",Georgia,serif; font-size:17px; }
+
+/* Alignment controls */
+.alignment-controls { display:flex; align-items:center; gap:18px; flex-wrap:nowrap; }
+.alignment-group { display:flex; align-items:center; gap:4px; white-space:nowrap; }
+.alignment-group label { font-size:10px; color:#8a8c85; font-weight:600; letter-spacing:0.05em; margin-right:2px; }
+.align-btn { width:24px; height:24px; padding:0; border:1px solid #d7d7d0; border-radius:4px; background:#fff; color:#8a8c85; font-size:11px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.15s; flex-shrink:0; }
+.align-btn:hover { border-color:#c9d75e; color:#8dac66; background:#f9f9f6; }
+.align-btn.active { border-color:#c9d75e; background:#c9d75e; color:#293022; font-weight:700; }
+.align-btn:disabled { opacity:0.5; cursor:not-allowed; }
 /* The chapter typography controls apply to body copy only. Headings keep a
    deliberate display face and scale, independent of the body font/size. */
 .prose-editor h1,.prose-editor h2,.prose-editor h3,.prose-editor h4,.prose-editor h5,.prose-editor h6 { font-family:"Playfair Display",Georgia,serif; color:#262522; letter-spacing:-.02em; }
