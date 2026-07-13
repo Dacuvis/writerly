@@ -63,6 +63,19 @@ function hideLoadingIndicator() {
   if (indicator) indicator.remove();
 }
 
+function escapeHtml(value: string) {
+  return value.replace(
+    /[&<>"]/g,
+    (character) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+      })[character] ?? character,
+  );
+}
+
 export async function exportChapterPdf(
   chapter: ChapterPdf,
   manuscriptTitle: string,
@@ -70,19 +83,25 @@ export async function exportChapterPdf(
   showLoadingIndicator();
 
   try {
-    // Tunggu semua font selesai dimuat
     await document.fonts?.ready;
-    
-    // Tambahan delay untuk memastikan fonts fully rendered
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    const wrapper = document.createElement("div");
+    wrapper.style.cssText = `
+      position: absolute;
+      left: -9999px;
+      top: -9999px;
+      width: 808px;
+      overflow: hidden;
+      z-index: -9999;
+      pointer-events: none;
+    `;
 
     const printable = document.createElement("article");
-
+    // KUNCI UTAMA 1: Kunci lebar ke angka mutlak 808px (menyamai windowWidth jsPDF)
+    // agar pembagian ruang kanan-kiri untuk text-align center menjadi 100% presisi.
     printable.style.cssText = `
-      position: fixed;
-      left: -99999px;
-      top: 0;
-      width: 680px;
+      width: 808px;
       padding: 56px 64px;
       background: #ffffff;
       color: #262522;
@@ -94,79 +113,91 @@ export async function exportChapterPdf(
 
     printable.innerHTML = `
       <p style="
-        margin:0 0 24px;
-        color:#5a5e54;
-        font:500 10px Arial,sans-serif;
-        letter-spacing:.16em;
+        margin: 0 0 24px;
+        color: #5a5e54;
+        font-weight: 500;
+        font-size: 10px;
+        font-family: Arial, sans-serif;
+        letter-spacing: .16em;
       ">
         ${escapeHtml(manuscriptTitle.toUpperCase())}
       </p>
 
       <h1 style="
-        margin:0 0 38px;
-        font:600 39px/1.12 'Playfair Display', Georgia, serif;
-        letter-spacing:-.035em;
-        color:#262522;
+        margin: 0 0 38px;
+        font-weight: 600;
+        font-size: 39px;
+        line-height: 1.12;
+        font-family: 'Playfair Display', Georgia, serif;
+        letter-spacing: -.035em;
+        color: #262522;
       ">
         ${escapeHtml(chapter.title)}
       </h1>
 
-      <section>
+      <section class="editor-content">
         ${chapter.content_html}
       </section>
     `;
 
-    // Ensure all text elements have proper styling and color
-    printable.querySelectorAll("p").forEach((element) => {
-      const el = element as HTMLElement;
-      if (!el.style.margin) {
-        el.style.margin = "0 0 23px";
+    const styleTag = document.createElement("style");
+    styleTag.textContent = `
+      /* KUNCI UTAMA 2: Hancurkan margin bawaan iframe html2canvas yang sering menggeser layout */
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 808px !important;
+        box-sizing: border-box;
       }
-      el.style.color = "#262522";
-      el.style.visibility = "visible";
-    });
 
-    printable.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((element) => {
-      const el = element as HTMLElement;
-      el.style.cssText = `
-        font-family:'Playfair Display', Georgia, serif;
-        line-height:1.2;
-        margin:0 0 22px;
-        color:#262522;
-        visibility:visible;
-      `;
-    });
+      .editor-content p,
+      .editor-content h1,
+      .editor-content h2,
+      .editor-content h3,
+      .editor-content h4,
+      .editor-content h5,
+      .editor-content h6 {
+        display: block;
+        width: 100%;
+        margin: 0 0 23px;
+        color: #262522;
+        box-sizing: border-box;
+      }
 
-    // Apply color to all elements and ensure visibility
-    printable.querySelectorAll("*").forEach((element) => {
-      const el = element as HTMLElement;
-      el.style.color = "#262522";
-      el.style.visibility = "visible";
-    });
+      .editor-content span {
+        display: inline;
+      }
 
-    document.body.appendChild(printable);
+      /* Utilitas penangkap kelas alignment jika teks editor menggunakan class */
+      .ql-align-center, .text-center { text-align: center !important; }
+      .ql-align-right, .text-right { text-align: right !important; }
+      .ql-align-justify, .text-justify { text-align: justify !important; }
+    `;
+    printable.prepend(styleTag);
+
+    wrapper.appendChild(printable);
+    document.body.appendChild(wrapper);
+
+    await new Promise((resolve) => requestAnimationFrame(resolve));
 
     const pdf = new jsPDF({
       unit: "pt",
       format: "a4",
     });
 
-    pdf.html(printable, {
+    await pdf.html(printable, {
       x: 0,
       y: 0,
       width: 595,
       windowWidth: 808,
-
+      autoPaging: "text",
       html2canvas: {
-        scale: 2,
         backgroundColor: "#ffffff",
         useCORS: true,
-        allowTaint: true,
         logging: false,
       },
-
       callback: (doc) => {
-        printable.remove();
+        wrapper.remove();
         hideLoadingIndicator();
 
         const safeName =
@@ -181,17 +212,4 @@ export async function exportChapterPdf(
     console.error("Error exporting PDF:", error);
     alert("Gagal export PDF. Silakan coba lagi.");
   }
-}
-
-function escapeHtml(value: string) {
-  return value.replace(
-    /[&<>"]/g,
-    (character) =>
-      ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-      })[character] ?? character,
-  );
 }
