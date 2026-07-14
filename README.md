@@ -76,6 +76,18 @@ Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for se
 
 ## Changelog
 
+### v0.0.2 — Fix white screen on desktop app
+
+**Problem:** Opening the packaged Writerly `.exe` (Electron) showed a blank white screen.
+
+**Root cause:** The production build loaded the UI over `file://`, which blocked ES module scripts, and the desktop app did not start the bundled backend/API.
+
+**Fix:**
+
+- Bundle and start the compiled Bun backend with the desktop app
+- Serve the built frontend over `http://127.0.0.1:3001` instead of `file://`
+- Point API requests at the local backend when running in the packaged app
+
 ### v0.0.1 — PDF text alignment fix
 
 **Problem:** Text alignment (center, right, justify) set in the editor was not reflected in exported PDFs. Headings appeared left-aligned regardless of the alignment chosen.
