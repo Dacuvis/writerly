@@ -10,19 +10,38 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "electron:dev": "concurrently -k \"bun run dev\" \"cd backend && bun run index.ts\" \"wait-on http://localhost:5173 http://localhost:3001/health && cross-env ELECTRON_START_URL=http://localhost:5173 electron .\"",
-    "electron:build": "bun run build && electron-builder",
-    "electron:pack": "bun run build && electron-builder --dir"
+    "electron:build": "bun run build && cd backend && bun build --compile index.ts --outfile writerly-api.exe && cd .. && electron-builder",
+    "electron:pack": "bun run build && cd backend && bun build --compile index.ts --outfile writerly-api.exe && cd .. && electron-builder --dir"
   },
   "build": {
     "appId": "com.writerly.app",
     "productName": "Writerly",
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
     "directories": {
       "output": "release"
     },
     "files": [
-      "dist/**",
       "electron/**",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "dist",
+        "to": "dist"
+      },
+      {
+        "from": "backend/writerly-api.exe",
+        "to": "backend/writerly-api.exe"
+      },
+      {
+        "from": "backend/schema.sql",
+        "to": "backend/schema.sql"
+      }
     ],
     "win": {
       "target": "nsis"

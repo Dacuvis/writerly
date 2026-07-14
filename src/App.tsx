@@ -4,6 +4,7 @@ import ChapterDialog from "./components/ChapterDialog";
 import ManuscriptDialog from "./components/ManuscriptDialog";
 import ConfirmDialog from "./components/ConfirmDialog";
 import { exportChapterPdf } from "./lib/exportChapterPdf";
+import { apiUrl } from "./lib/api";
 import "./index.css";
 
 type ManuscriptSummary = {
@@ -34,7 +35,7 @@ function App() {
   const [isExporting, setIsExporting] = useState(false);
 
   async function loadManuscript(id: string) {
-    const response = await fetch(`/api/manuscripts/${id}`);
+    const response = await fetch(apiUrl(`/api/manuscripts/${id}`));
     if (!response.ok) throw new Error("Could not load manuscript");
     const data = (await response.json()) as Manuscript;
     setManuscript(data);
@@ -42,7 +43,7 @@ function App() {
     setSaveStatus("saved");
   }
   useEffect(() => {
-    fetch("/api/manuscripts")
+    fetch(apiUrl("/api/manuscripts"))
       .then((response) => (response.ok ? response.json() : Promise.reject()))
       .then(async (items: ManuscriptSummary[]) => {
         setManuscripts(items);
@@ -73,7 +74,7 @@ function App() {
   ) {
     setSaveStatus("saving");
     try {
-      const response = await fetch(`/api/chapters/${id}`, {
+      const response = await fetch(apiUrl(`/api/chapters/${id}`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -115,7 +116,7 @@ function App() {
     title: string;
     description: string;
   }) {
-    const response = await fetch("/api/manuscripts", {
+    const response = await fetch(apiUrl("/api/manuscripts"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -130,7 +131,7 @@ function App() {
     description: string;
   }) {
     if (!manuscript) return;
-    const response = await fetch(`/api/manuscripts/${manuscript.id}`, {
+    const response = await fetch(apiUrl(`/api/manuscripts/${manuscript.id}`), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -146,7 +147,7 @@ function App() {
     if (!manuscript) return;
     const id = manuscript.id;
     const remaining = manuscripts.filter((item) => item.id !== id);
-    const response = await fetch(`/api/manuscripts/${id}`, {
+    const response = await fetch(apiUrl(`/api/manuscripts/${id}`), {
       method: "DELETE",
     });
     if (!response.ok) throw new Error("Could not delete manuscript");
@@ -157,7 +158,7 @@ function App() {
   }
   async function createChapter(title: string) {
     if (!manuscript) return;
-    const response = await fetch(`/api/manuscripts/${manuscript.id}/chapters`, {
+    const response = await fetch(apiUrl(`/api/manuscripts/${manuscript.id}/chapters`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title }),
@@ -172,7 +173,7 @@ function App() {
   }
   async function renameChapter(title: string) {
     if (!selectedChapter) return;
-    const response = await fetch(`/api/chapters/${selectedChapter.id}`, {
+    const response = await fetch(apiUrl(`/api/chapters/${selectedChapter.id}`), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title }),
@@ -182,7 +183,7 @@ function App() {
   }
   async function deleteChapter() {
     if (!manuscript || !selectedChapter) return;
-    const response = await fetch(`/api/chapters/${selectedChapter.id}`, {
+    const response = await fetch(apiUrl(`/api/chapters/${selectedChapter.id}`), {
       method: "DELETE",
     });
     if (!response.ok) throw new Error("Could not delete chapter");

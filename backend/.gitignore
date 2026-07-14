@@ -8,6 +8,7 @@ data/*.sqlite-wal
 out
 dist
 *.tgz
+writerly-api.exe
 
 # code coverage
 coverage

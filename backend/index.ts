@@ -1,6 +1,23 @@
 import { Elysia, t } from "elysia";
 import { swagger } from "@elysiajs/swagger";
+import { existsSync } from "node:fs";
+import { join, normalize } from "node:path";
 import { db, wordCount } from "./database";
+
+const staticDir = process.env.WRITERLY_STATIC_DIR;
+
+function resolveStaticPath(pathname: string) {
+  if (!staticDir) return null;
+
+  const relativePath = pathname === "/" ? "index.html" : pathname.replace(/^\//, "");
+  const filePath = normalize(join(staticDir, relativePath));
+
+  if (!filePath.startsWith(normalize(staticDir))) return null;
+  if (existsSync(filePath)) return filePath;
+
+  const indexPath = join(staticDir, "index.html");
+  return existsSync(indexPath) ? indexPath : null;
+}
 
 const app = new Elysia()
   .use(swagger({
@@ -84,7 +101,19 @@ const app = new Elysia()
     const result = db.query("DELETE FROM chapter_notes WHERE id = ?").run(params.id);
     if (!result.changes) { set.status = 404; return { error: "Note not found" }; }
     return { ok: true };
-  })
-  .listen(3001);
+  });
+
+if (staticDir) {
+  app.get("/*", ({ request, set }) => {
+    const filePath = resolveStaticPath(new URL(request.url).pathname);
+    if (!filePath) {
+      set.status = 404;
+      return "Not found";
+    }
+    return Bun.file(filePath);
+  });
+}
+
+app.listen(3001);
 
 console.log(`Writerly API running at ${app.server?.url}`);

@@ -6,6 +6,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { Mark } from "@tiptap/core";
 import { useEffect, useRef, useState } from "react";
 import { DEFAULT_EDITOR_FONT, FONT_OPTIONS } from "../lib/fonts";
+import { apiUrl } from "../lib/api";
 
 export type Chapter = {
   id: string;
@@ -113,7 +114,7 @@ function ChapterNotes({ chapterId }: { chapterId: string }) {
     let active = true;
     setLoading(true);
     setDraft("");
-    void fetch(`/api/chapters/${chapterId}`)
+    void fetch(apiUrl(`/api/chapters/${chapterId}`))
       .then((response) => (response.ok ? response.json() : Promise.reject()))
       .then((data: { notes?: Note[] }) => {
         if (active) setNotes(data.notes ?? []);
@@ -135,7 +136,7 @@ function ChapterNotes({ chapterId }: { chapterId: string }) {
     if (!body) return;
     setSaving(true);
     try {
-      const response = await fetch(`/api/chapters/${chapterId}/notes`, {
+      const response = await fetch(apiUrl(`/api/chapters/${chapterId}/notes`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ body }),
@@ -151,7 +152,7 @@ function ChapterNotes({ chapterId }: { chapterId: string }) {
   async function saveNote(id: string, body: string) {
     const value = body.trim();
     if (!value) return;
-    const response = await fetch(`/api/notes/${id}`, {
+    const response = await fetch(apiUrl(`/api/notes/${id}`), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ body: value }),
@@ -162,7 +163,7 @@ function ChapterNotes({ chapterId }: { chapterId: string }) {
     }
   }
   async function deleteNote(id: string) {
-    const response = await fetch(`/api/notes/${id}`, { method: "DELETE" });
+    const response = await fetch(apiUrl(`/api/notes/${id}`), { method: "DELETE" });
     if (response.ok)
       setNotes((items) => items.filter((note) => note.id !== id));
   }

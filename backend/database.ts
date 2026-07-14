@@ -1,12 +1,25 @@
 import { Database } from "bun:sqlite";
 import { mkdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, basename } from "node:path";
 
-const databasePath = join(import.meta.dir, "data", "writerly.sqlite");
-mkdirSync(dirname(databasePath), { recursive: true });
+function getBackendRoot() {
+  if (process.env.WRITERLY_SCHEMA_PATH) {
+    return dirname(process.env.WRITERLY_SCHEMA_PATH);
+  }
+  if (basename(process.execPath) === "writerly-api.exe") {
+    return dirname(process.execPath);
+  }
+  return import.meta.dir;
+}
+
+const dataDir = process.env.WRITERLY_DATA_DIR ?? join(getBackendRoot(), "data");
+const databasePath = join(dataDir, "writerly.sqlite");
+const schemaPath = process.env.WRITERLY_SCHEMA_PATH ?? join(getBackendRoot(), "schema.sql");
+
+mkdirSync(dataDir, { recursive: true });
 
 export const db = new Database(databasePath, { create: true });
-db.exec(readFileSync(join(import.meta.dir, "schema.sql"), "utf8"));
+db.exec(readFileSync(schemaPath, "utf8"));
 // Existing local databases need this migration because CREATE TABLE IF NOT EXISTS
 // does not add columns to an already-created table.
 const chapterColumns = db.query("PRAGMA table_info(chapters)").all() as Array<{ name: string }>;
