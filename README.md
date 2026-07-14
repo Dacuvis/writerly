@@ -76,6 +76,12 @@ Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for se
 
 ## Changelog
 
+### v0.0.3 — Sidebar navigation and editor fonts
+
+- Improved the left navbar so manuscripts and chapters share one scrollable column, with sticky section labels and a pinned brand/footer
+- Added more writing fonts (EB Garamond, Literata, Spectral, Cormorant Garamond, Newsreader, Crimson Pro, Cardo, Fraunces, Instrument Sans)
+- Replaced the native font `<select>` with a compact scrollable font picker so the menu stays clear of the writing page
+
 ### v0.0.2 — Fix white screen on desktop app
 
 **Problem:** Opening the packaged Writerly `.exe` (Electron) showed a blank white screen.

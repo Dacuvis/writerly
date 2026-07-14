@@ -5,7 +5,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Mark } from "@tiptap/core";
 import { useEffect, useRef, useState } from "react";
-import { DEFAULT_EDITOR_FONT, FONT_OPTIONS } from "../lib/fonts";
+import { DEFAULT_EDITOR_FONT, FONT_OPTIONS, fontCss, resolveFontValue } from "../lib/fonts";
 import { apiUrl } from "../lib/api";
 
 export type Chapter = {
@@ -56,6 +56,75 @@ function ToolButton({
     </button>
   );
 }
+
+function FontFamilySelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (font: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const current = resolveFontValue(value);
+  const label =
+    FONT_OPTIONS.find((font) => font.value === current)?.label ?? current;
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointer(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", handlePointer);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handlePointer);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  return (
+    <div
+      className={`font-family-picker${open ? " open" : ""}`}
+      ref={rootRef}
+    >
+      <button
+        type="button"
+        className="font-family-trigger"
+        aria-label="Font for selected text"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((isOpen) => !isOpen)}
+      >
+        <strong style={{ fontFamily: fontCss(current) }}>{label}</strong>
+        <i>▾</i>
+      </button>
+      {open && (
+        <div className="font-family-menu" role="listbox" aria-label="Fonts">
+          {FONT_OPTIONS.map((font) => (
+            <button
+              key={font.value}
+              type="button"
+              role="option"
+              aria-selected={font.value === current}
+              className={`font-family-option${font.value === current ? " active" : ""}`}
+              style={{ fontFamily: font.css }}
+              onClick={() => {
+                onChange(font.value);
+                setOpen(false);
+              }}
+            >
+              {font.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 type Note = { id: string; body: string };
 
 const FontFamily = Mark.create({
@@ -65,10 +134,13 @@ const FontFamily = Mark.create({
     return {
       fontFamily: {
         default: null,
-        parseHTML: (element: HTMLElement) => element.style.fontFamily || null,
+        parseHTML: (element: HTMLElement) => {
+          const raw = element.style.fontFamily || null;
+          return raw ? resolveFontValue(raw) : null;
+        },
         renderHTML: (attributes: { fontFamily?: string }) =>
           attributes.fontFamily
-            ? { style: `font-family: ${attributes.fontFamily}` }
+            ? { style: `font-family: ${fontCss(attributes.fontFamily)}` }
             : {},
       },
     };
@@ -277,8 +349,9 @@ export default function Editor({ chapter, onSave }: Props) {
   const headingLevel =
     [1, 2, 3, 4, 5, 6].find((level) => editor.isActive("heading", { level })) ??
     0;
-  const fontFamily =
-    editor.getAttributes("fontFamily").fontFamily || DEFAULT_EDITOR_FONT;
+  const fontFamily = resolveFontValue(
+    editor.getAttributes("fontFamily").fontFamily || DEFAULT_EDITOR_FONT,
+  );
   const fontSize =
     Number.parseInt(editor.getAttributes("fontSize").fontSize, 10) || 17;
   function setTextSize(size: number) {
@@ -313,18 +386,7 @@ export default function Editor({ chapter, onSave }: Props) {
               <option key={level}>Heading {level}</option>
             ))}
           </select>
-          <select
-            className="font-family-select"
-            aria-label="Font for selected text"
-            value={fontFamily}
-            onChange={(event) => setTextFont(event.target.value)}
-          >
-            {FONT_OPTIONS.map((font) => (
-              <option key={font.value} value={font.value}>
-                {font.label}
-              </option>
-            ))}
-          </select>
+          <FontFamilySelect value={fontFamily} onChange={setTextFont} />
           <select
             className="font-size-select"
             aria-label="Font size for selected text"

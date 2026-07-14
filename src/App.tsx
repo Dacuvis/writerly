@@ -197,83 +197,38 @@ function App() {
   return (
     <main className="app-shell">
       <aside className="sidebar">
-        <div className="brand">
-          <span className="brand-mark">W</span>
-          <span>writerly</span>
+        <div className="sidebar-top">
+          <div className="brand">
+            <span className="brand-mark">W</span>
+            <span>writerly</span>
+          </div>
+          <button
+            className="new-button"
+            onClick={() => setDialog("new-manuscript")}
+          >
+            <span>+</span> New manuscript
+          </button>
         </div>
-        <button
-          className="new-button"
-          onClick={() => setDialog("new-manuscript")}
-        >
-          <span>+</span> New manuscript
-        </button>
-        <div className="side-label">MANUSCRIPTS</div>
-        <nav className="manuscript-list">
-          {manuscripts.map((item) => (
-            <button
-              className={`manuscript-select ${item.id === manuscript?.id ? "active" : ""}`}
-              key={item.id}
-              onClick={() => void loadManuscript(item.id)}
-            >
-              <span>▱</span>
-              <strong>{item.title}</strong>
-              {item.id === manuscript?.id && (
-                <small className="item-actions">
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      setDialog("rename-manuscript");
-                    }}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    className="danger-action"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      setDialog("delete-manuscript");
-                    }}
-                  >
-                    Delete
-                  </button>
-                </small>
-              )}
-            </button>
-          ))}
-        </nav>
-        {manuscript && (
-          <>
-            <div className="side-label chapter-label">CHAPTERS</div>
-            <nav className="chapter-list">
-              {manuscript.chapters.map((chapter) => (
+        <div className="sidebar-scroll">
+          <div className="manuscript-section">
+            <div className="side-label">MANUSCRIPTS</div>
+            <nav className="manuscript-list">
+              {manuscripts.map((item) => (
                 <button
-                  className={`chapter ${chapter.id === selectedId ? "active" : ""}`}
-                  key={chapter.id}
-                  onClick={() => setSelectedId(chapter.id)}
+                  className={`manuscript-select ${item.id === manuscript?.id ? "active" : ""}`}
+                  key={item.id}
+                  onClick={() => void loadManuscript(item.id)}
                 >
-                  <span className="chapter-number">
-                    {String(chapter.position).padStart(2, "0")}
-                  </span>
-                  <span className="chapter-copy">
-                    <strong>{chapter.title}</strong>
-                    <small>
-                      {chapter.word_count
-                        ? `${chapter.word_count.toLocaleString()} words`
-                        : "—"}
-                    </small>
-                  </span>
-                  {chapter.id === selectedId && (
-                    <span className="chapter-actions">
+                  <span>▱</span>
+                  <strong>{item.title}</strong>
+                  {item.id === manuscript?.id && (
+                    <small className="item-actions">
                       <button
                         type="button"
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
-                          setDialog("rename-chapter");
+                          setDialog("rename-manuscript");
                         }}
                       >
                         Edit
@@ -284,24 +239,75 @@ function App() {
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
-                          setDialog("delete-chapter");
+                          setDialog("delete-manuscript");
                         }}
                       >
                         Delete
                       </button>
-                    </span>
+                    </small>
                   )}
                 </button>
               ))}
             </nav>
-            <button
-              className="add-scene"
-              onClick={() => setDialog("new-chapter")}
-            >
-              + Add chapter
-            </button>
-          </>
-        )}
+          </div>
+          {manuscript && (
+            <div className="chapter-section">
+              <div className="side-label chapter-label">CHAPTERS</div>
+              <nav className="chapter-list">
+                {manuscript.chapters.map((chapter) => (
+                  <button
+                    className={`chapter ${chapter.id === selectedId ? "active" : ""}`}
+                    key={chapter.id}
+                    onClick={() => setSelectedId(chapter.id)}
+                  >
+                    <span className="chapter-number">
+                      {String(chapter.position).padStart(2, "0")}
+                    </span>
+                    <span className="chapter-copy">
+                      <strong>{chapter.title}</strong>
+                      <small>
+                        {chapter.word_count
+                          ? `${chapter.word_count.toLocaleString()} words`
+                          : "—"}
+                      </small>
+                    </span>
+                    {chapter.id === selectedId && (
+                      <span className="chapter-actions">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setDialog("rename-chapter");
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="danger-action"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setDialog("delete-chapter");
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </nav>
+              <button
+                className="add-scene"
+                onClick={() => setDialog("new-chapter")}
+              >
+                + Add chapter
+              </button>
+            </div>
+          )}
+        </div>
         <div className="sidebar-bottom">
           <button className="nav-link">
             <span>☼</span> Appearance
