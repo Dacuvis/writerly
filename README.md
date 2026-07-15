@@ -76,6 +76,13 @@ Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for se
 
 ## Changelog
 
+### v0.0.4 — Appearance themes
+
+- Added an Appearance menu with Green, Pink, and Dark themes; preference is remembered in local storage
+- Themed the sidebar, editor chrome, dialogs, and controls so colors stay consistent across the app
+- Fixed sticky **MANUSCRIPTS** / **CHAPTERS** labels and selected manuscript/chapter blocks so their backgrounds match the active theme
+- Hid the default Electron application menu on desktop
+
 ### v0.0.3 — Sidebar navigation and editor fonts
 
 - Improved the left navbar so manuscripts and chapters share one scrollable column, with sticky section labels and a pinned brand/footer
