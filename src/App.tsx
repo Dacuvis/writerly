@@ -1,10 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Editor, { type Chapter } from "./components/Editor";
 import ChapterDialog from "./components/ChapterDialog";
 import ManuscriptDialog from "./components/ManuscriptDialog";
 import ConfirmDialog from "./components/ConfirmDialog";
 import { exportChapterPdf } from "./lib/exportChapterPdf";
 import { apiUrl } from "./lib/api";
+import {
+  readStoredTheme,
+  storeTheme,
+  THEME_OPTIONS,
+  type ThemeId,
+} from "./lib/themes";
 import "./index.css";
 
 type ManuscriptSummary = {
@@ -24,6 +30,73 @@ type Dialog =
   | "delete-chapter"
   | null;
 
+function AppearanceMenu({
+  theme,
+  onChange,
+}: {
+  theme: ThemeId;
+  onChange: (theme: ThemeId) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointer(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", handlePointer);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handlePointer);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  return (
+    <div
+      className={`appearance-picker${open ? " open" : ""}`}
+      ref={rootRef}
+    >
+      <button
+        type="button"
+        className="nav-link appearance-trigger"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((isOpen) => !isOpen)}
+      >
+        <span>☼</span> Appearance
+      </button>
+      {open && (
+        <div className="appearance-menu" role="menu" aria-label="Theme">
+          {THEME_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              role="menuitemradio"
+              aria-checked={theme === option.id}
+              className={`appearance-option${theme === option.id ? " active" : ""}`}
+              onClick={() => {
+                onChange(option.id);
+                setOpen(false);
+              }}
+            >
+              <i className={`theme-swatch theme-swatch-${option.id}`} />
+              <span>
+                <strong>{option.label}</strong>
+                <small>{option.hint}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function App() {
   const [manuscripts, setManuscripts] = useState<ManuscriptSummary[]>([]);
   const [manuscript, setManuscript] = useState<Manuscript | null>(null);
@@ -33,6 +106,12 @@ function App() {
     "loading" | "saved" | "saving" | "error"
   >("loading");
   const [isExporting, setIsExporting] = useState(false);
+  const [theme, setTheme] = useState<ThemeId>(() => readStoredTheme());
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    storeTheme(theme);
+  }, [theme]);
 
   async function loadManuscript(id: string) {
     const response = await fetch(apiUrl(`/api/manuscripts/${id}`));
@@ -309,9 +388,7 @@ function App() {
           )}
         </div>
         <div className="sidebar-bottom">
-          <button className="nav-link">
-            <span>☼</span> Appearance
-          </button>
+          <AppearanceMenu theme={theme} onChange={setTheme} />
         </div>
       </aside>
       <section className="workspace">
